@@ -30,10 +30,7 @@ import sys as _sys
 import time as _time
 import re as _re
 
-try:
-    import logging as _logging
-except:
-    _logging = None
+import logging as _logging
 
 import psycopg2
 from psycopg2 import extensions as _ext
@@ -109,16 +106,16 @@ class DictCursorBase(_cursor):
         try:
             if self._prefetch:
                 res = super(DictCursorBase, self).__iter__()
-                first = res.next()
+                first = next(res)
             if self._query_executed:
                 self._build_index()
             if not self._prefetch:
                 res = super(DictCursorBase, self).__iter__()
-                first = res.next()
+                first = next(res)
 
             yield first
             while 1:
-                yield res.next()
+                yield next(res)
         except StopIteration:
             return
 
@@ -175,10 +172,10 @@ class DictRow(list):
         list.__setitem__(self, x, v)
 
     def items(self):
-        return list(self.iteritems())
+        return list(self.items())
 
     def keys(self):
-        return self._index.keys()
+        return list(self._index.keys())
 
     def values(self):
         return tuple(self[:])
@@ -189,21 +186,21 @@ class DictRow(list):
     def get(self, x, default=None):
         try:
             return self[x]
-        except:
+        except Exception:
             return default
 
     def iteritems(self):
-        for n, v in self._index.iteritems():
+        for n, v in self._index.items():
             yield n, list.__getitem__(self, v)
 
     def iterkeys(self):
-        return self._index.iterkeys()
+        return iter(self._index.keys())
 
     def itervalues(self):
         return list.__iter__(self)
 
     def copy(self):
-        return dict(self.iteritems())
+        return dict(iter(self.items()))
 
     def __contains__(self, x):
         return x in self._index
@@ -336,19 +333,19 @@ class NamedTupleCursor(_cursor):
         nt = self.Record
         if nt is None:
             nt = self.Record = self._make_nt()
-        return map(nt._make, ts)
+        return list(map(nt._make, ts))
 
     def fetchall(self):
         ts = super(NamedTupleCursor, self).fetchall()
         nt = self.Record
         if nt is None:
             nt = self.Record = self._make_nt()
-        return map(nt._make, ts)
+        return list(map(nt._make, ts))
 
     def __iter__(self):
         try:
             it = super(NamedTupleCursor, self).__iter__()
-            t = it.next()
+            t = next(it)
 
             nt = self.Record
             if nt is None:
@@ -357,18 +354,32 @@ class NamedTupleCursor(_cursor):
             yield nt._make(t)
 
             while 1:
-                yield nt._make(it.next())
+                yield nt._make(next(it))
         except StopIteration:
             return
 
     try:
         from collections import namedtuple
-    except ImportError, _exc:
+    except ImportError as _exc:
         def _make_nt(self):
             raise self._exc
     else:
         def _make_nt(self, namedtuple=namedtuple):
-            return namedtuple("Record", [d[0] for d in self.description or ()])
+            # ascii except alnum and underscore
+            nochars = ' !"#$%&\'()*+,-./:;<=>?@[\\]^`{|}~'
+            re_clean = _re.compile('[' + _re.escape(nochars) + ']')
+
+            def f(s):
+                s = re_clean.sub('_', s)
+                # Python identifier cannot start with numbers, namedtuple fields
+                # cannot start with underscore. So...
+                if s[0] == '_' or '0' <= s[0] <= '9':
+                    s = 'f' + s
+
+                return s
+
+            return namedtuple(
+                "Record", [f(d[0]) for d in self.description or ()])
 
 
 class LoggingConnection(_connection):
@@ -455,6 +466,8 @@ class MinTimeLoggingConnection(LoggingConnection):
     def filter(self, msg, curs):
         t = (_time.time() - curs.timestamp) * 1000
         if t > self._mintime:
+            if _sys.version_info[0] >= 3 and isinstance(msg, bytes):
+                msg = msg.decode(_ext.encodings[self.encoding], 'replace')
             return msg + _os.linesep + "  (execution time: %d ms)" % t
 
     def cursor(self, *args, **kwargs):
@@ -588,7 +601,7 @@ class ReplicationCursor(_replicationCursor):
                     "cannot specify output plugin options for physical replication")
 
             command += " ("
-            for k, v in options.iteritems():
+            for k, v in options.items():
                 if not command.endswith('('):
                     command += ", "
                 command += "%s %s" % (quote_ident(k, self), _A(str(v)))
@@ -739,8 +752,8 @@ def wait_select(conn):
 
     The function is an example of a wait callback to be registered with
     `~psycopg2.extensions.set_wait_callback()`. This function uses
-    :py:func:`~select.select()` to wait for data available.
-
+    :py:func:`~select.select()` to wait for data to become available, and
+    therefore is able to handle/receive SIGINT/KeyboardInterrupt.
     """
     import select
     from psycopg2.extensions import POLL_OK, POLL_READ, POLL_WRITE
@@ -796,7 +809,7 @@ class HstoreAdapter(object):
 
         adapt = _ext.adapt
         rv = []
-        for k, v in self.wrapped.iteritems():
+        for k, v in self.wrapped.items():
             k = adapt(k)
             k.prepare(self.conn)
             k = k.getquoted()
@@ -818,9 +831,9 @@ class HstoreAdapter(object):
         if not self.wrapped:
             return b"''::hstore"
 
-        k = _ext.adapt(self.wrapped.keys())
+        k = _ext.adapt(list(self.wrapped.keys()))
         k.prepare(self.conn)
-        v = _ext.adapt(self.wrapped.values())
+        v = _ext.adapt(list(self.wrapped.values()))
         v.prepare(self.conn)
         return b"hstore(" + k.getquoted() + b", " + v.getquoted() + b")"
 
@@ -914,7 +927,7 @@ WHERE typname = 'hstore';
         return tuple(rv0), tuple(rv1)
 
 
-def register_hstore(conn_or_curs, globally=False, unicode=False,
+def register_hstore(conn_or_curs, globally=False, str=False,
                     oid=None, array_oid=None):
     r"""Register adapter and typecaster for `!dict`\-\ |hstore| conversions.
 
@@ -965,7 +978,7 @@ def register_hstore(conn_or_curs, globally=False, unicode=False,
             array_oid = tuple([x for x in array_oid if x])
 
     # create and register the typecaster
-    if _sys.version_info[0] < 3 and unicode:
+    if _sys.version_info[0] < 3 and str:
         cast = HstoreAdapter.parse_unicode
     else:
         cast = HstoreAdapter.parse
@@ -1152,8 +1165,8 @@ def _paginate(seq, page_size):
     it = iter(seq)
     while 1:
         try:
-            for i in xrange(page_size):
-                page.append(it.next())
+            for i in range(page_size):
+                page.append(next(it))
             yield page
             page = []
         except StopIteration:
@@ -1178,6 +1191,9 @@ def execute_batch(cur, sql, argslist, page_size=100):
     fewer multi-statement commands, each one containing at most *page_size*
     statements, resulting in a reduced number of server roundtrips.
 
+    After the execution of the function the `cursor.rowcount` property will
+    **not** contain a total result.
+
     """
     for page in _paginate(argslist, page_size=page_size):
         sqls = [cur.mogrify(sql, args) for args in page]
@@ -1198,10 +1214,15 @@ def execute_values(cur, sql, argslist, template=None, page_size=100):
         *template*.
 
     :param template: the snippet to merge to every item in *argslist* to
-        compose the query. If *argslist* items are sequences it should contain
-        positional placeholders (e.g. ``"(%s, %s, %s)"``, or ``"(%s, %s, 42)``"
-        if there are constants value...); If *argslist* is items are mapping
-        it should contain named placeholders (e.g. ``"(%(id)s, %(f1)s, 42)"``).
+        compose the query.
+
+        - If the *argslist* items are sequences it should contain positional
+          placeholders (e.g. ``"(%s, %s, %s)"``, or ``"(%s, %s, 42)``" if there
+          are constants value...).
+
+        - If the *argslist* items are mappings it should contain named
+          placeholders (e.g. ``"(%(id)s, %(f1)s, 42)"``).
+
         If not specified, assume the arguments are sequence and use a simple
         positional template (i.e.  ``(%s, %s, ...)``), with the number of
         placeholders sniffed by the first element in *argslist*.
@@ -1211,6 +1232,9 @@ def execute_values(cur, sql, argslist, template=None, page_size=100):
         one statement.
 
     .. __: https://www.postgresql.org/docs/current/static/queries-values.html
+
+    After the execution of the function the `cursor.rowcount` property will
+    **not** contain a total result.
 
     While :sql:`INSERT` is an obvious candidate for this function it is
     possible to use it with other statements, for example::
@@ -1232,6 +1256,10 @@ def execute_values(cur, sql, argslist, template=None, page_size=100):
         [(1, 20, 3), (4, 50, 6), (7, 8, 9)])
 
     '''
+    from psycopg2.sql import Composable
+    if isinstance(sql, Composable):
+        sql = sql.as_string(cur)
+
     # we can't just use sql % vals because vals is bytes: if sql is bytes
     # there will be some decoding error because of stupid codec used, and Py3
     # doesn't implement % on bytes.

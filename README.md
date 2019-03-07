@@ -6,24 +6,26 @@ missing the required PostgreSQL libraries in the AMI image, we needed to
 compile psycopg2 with the PostgreSQL `libpq.so` library statically linked
 libpq library instead of the default dynamic link.
 
+### This library is compiled with:
+
+- psycopg2 2.7.7
+- postgresql 10.7
+- Python 3.7
+
 ### How to use
 
-#### Python2.*
-Just copy the psycopg2 directory into your AWS Lambda zip package.
-
-#### Python 3.6
-Just copy the psycopg2-3.6 directory into your AWS Lambda project and rename it to psycopg2 before creating your AWS Lambda zip package.
+Copy the `psycopg2` directory into your AWS Lambda zip package.
 
 ### Instructions on compiling this package from scratch
 
 Here was the process that was used to build this package. You will need to
-perform these steps if you want to build a newer version of the psycopg2
+perform these steps if you want to build a different version of the psycopg2
 library.
 
 1. Download the
-  [PostgreSQL source code](https://ftp.postgresql.org/pub/source/v9.4.3/postgresql-9.4.3.tar.gz) and extract into a directory.
+  [PostgreSQL source code](https://ftp.postgresql.org/pub/source) (.tar.gz) and extract into a directory.
 2. Download the
-  [psycopg2 source code](http://initd.org/psycopg/tarballs/PSYCOPG-2-6/psycopg2-2.6.1.tar.gz) and extract into a directory.
+  [psycopg2 source code](http://initd.org/psycopg/tarballs) (.tar.gz) and extract into a directory.
 3. Go into the PostgreSQL source directory and execute the following commands:
   - `./configure --prefix {path_to_postgresql_source} --without-readline --without-zlib`
   - `make`
