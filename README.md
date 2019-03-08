@@ -14,7 +14,7 @@ libpq library instead of the default dynamic link.
 
 ### How to use
 
-Copy the `psycopg2` directory into your AWS Lambda zip package.
+Copy the `psycopg2` folder in the `build` folder into your AWS Lambda zip package.
 
 ### How to compile with different versions of libraries
 
