@@ -1,6 +1,8 @@
+SSL ?= 0
+
 .PHONY:	build
 build:
-	@docker build --force-rm -t awslambda-psycopg2 .
+	@docker build --force-rm --build-arg SSL=$(SSL) -t awslambda-psycopg2 .
 
 .PHONY: run
 run:
