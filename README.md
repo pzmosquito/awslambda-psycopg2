@@ -39,3 +39,9 @@ custom compiled psycopg2 library is now in `build` folder.
 ### Compile with SSL support
 
 - Change step 4 above to: `make build SSL=1`
+
+### Compile on Windows
+
+`makefile` is not available on Windows, there're few options:
+- use [cygwin](http://www.cygwin.com) - provide functionality similar to a Linux distribution on Windows.
+- run docker commands in `makefile` directly.
