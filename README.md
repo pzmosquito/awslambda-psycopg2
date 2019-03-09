@@ -44,4 +44,5 @@ custom compiled psycopg2 library is now in `build` folder.
 
 `makefile` is not available on Windows, there're few options:
 - use [cygwin](http://www.cygwin.com) - provide functionality similar to a Linux distribution on Windows.
+- use [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10) - let developers run GNU/Linux environment on Windows 10.
 - run docker commands in `makefile` directly.
