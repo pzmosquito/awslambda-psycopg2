@@ -31,9 +31,11 @@ Copy the `psycopg2` folder in the `build` folder into your AWS Lambda zip packag
 1. Download the
   [psycopg2 source code](http://initd.org/psycopg/tarballs) (.tar.gz),
   rename to **psycopg2.tar.gz** and put it into `sources` folder.
-1. build image: `make build`
-1. run image: `make run`
-1. delete image if you don't need it anymore: `make clean`
+1. compile library: `make compile`
+   - OR run each step manually:
+     1. build image: `make build`
+     1. run image: `make run`
+     1. delete image: `make clean`
 
 custom compiled psycopg2 library is now in `build` folder.
 

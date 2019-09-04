@@ -24,3 +24,6 @@ clean:
 	@echo "deleting image..."
 	@docker rmi awslambda-psycopg2 > /dev/null
 	@echo "done"
+
+.PHONY: compile
+compile: build run clean
