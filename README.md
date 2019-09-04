@@ -1,5 +1,11 @@
 psycopg2 Python 3 Library for AWS Lambda
-======================================
+====
+
+### Why this fork?
+**`psycopg2` library needs to be compiled in amazon linux environment.
+Most likely you don't have the environment.**
+
+**Solution? Docker!**
 
 This is a custom compiled psycopg2 C library for Python 3. Due to AWS Lambda
 missing the required PostgreSQL libraries in the AMI image, we needed to
@@ -8,8 +14,8 @@ libpq library instead of the default dynamic link.
 
 ### This library is compiled with:
 
-- psycopg2 2.7.7
-- postgresql 10.7
+- psycopg2 2.8
+- postgresql 11.5
 - Python 3.7
 
 ### How to use
@@ -17,11 +23,6 @@ libpq library instead of the default dynamic link.
 Copy the `psycopg2` folder in the `build` folder into your AWS Lambda zip package.
 
 ### Compile with different versions of libraries
-
-*Library needs to be compiled in amazon linux environment.
-Most likely you don't have the environment.*
-
-**Solution? Docker!**
 
 1. Install Docker.
 1. Download the
